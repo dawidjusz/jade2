@@ -16,7 +16,7 @@ public class BookBuyerAgent extends Agent {
   
   //list of found sellers
   private AID[] sellerAgents;
-  
+  private int budget = 1000;
 	protected void setup() {
 	  targetBookTitle = "";
 	  System.out.println("Hello! " + getAID().getLocalName() + " is ready for the purchase order.");
@@ -127,16 +127,22 @@ public class BookBuyerAgent extends Agent {
 	      }
 	      break;
 	    case 2:
-	      //best proposal consumption - purchase
-	      ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-          order.addReceiver(bestSeller);
-	      order.setContent(targetBookTitle);
-	      order.setConversationId("book-trade");
-	      order.setReplyWith("order"+System.currentTimeMillis());
-	      myAgent.send(order);
-	      mt = MessageTemplate.and(MessageTemplate.MatchConversationId("book-trade"),
-	                               MessageTemplate.MatchInReplyTo(order.getReplyWith()));
-	      step = 3;
+		if(budget < bestPrice) { //sprawdzamy czy kupujacy ma wystarczajacy budzet
+			System.out.println(getAID().getLocalName() + ": Nie masz tyle, potrzebujesz " + bestPrice + ", obecnie masz: " + budget); // wyswietlamy info przy braku
+			step = 4; // skaczemy do 4ki
+
+		}else {
+			//best proposal consumption - purchase
+			ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+			order.addReceiver(bestSeller);
+			order.setContent(targetBookTitle);
+			order.setConversationId("book-trade");
+			order.setReplyWith("order" + System.currentTimeMillis());
+			myAgent.send(order);
+			mt = MessageTemplate.and(MessageTemplate.MatchConversationId("book-trade"),
+					MessageTemplate.MatchInReplyTo(order.getReplyWith()));
+			step = 3;
+		}
 	      break;
 	    case 3:      
 	      //seller confirms the transaction
@@ -144,8 +150,10 @@ public class BookBuyerAgent extends Agent {
 	      if (reply != null) {
 	        if (reply.getPerformative() == ACLMessage.INFORM) {
 	          //purchase succeeded
-	          System.out.println(getAID().getLocalName() + ": " + targetBookTitle + " purchased for " + bestPrice + " from " + reply.getSender().getLocalName());
+					budget = budget - bestPrice; // w przypadku powodzenia zakupu odejmujemy kwote zakupu od budzetu
+	      System.out.println(getAID().getLocalName() + ": " + targetBookTitle + " purchased for " + bestPrice + " from " + reply.getSender().getLocalName());
 		  System.out.println(getAID().getLocalName() + ": waiting for the next purchase order.");
+		  System.out.println(getAID().getLocalName() + ": Zostalo " + budget + " w portfelu"); // Wyświetlamy ile pozostało w budżecie po prawidłowym zakupie
 		  targetBookTitle = "";
 	          //myAgent.doDelete();
 	        }
